@@ -135,25 +135,40 @@ export default function EditorPage() {
       })
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Failed to generate PDF' }))
-        throw new Error(errorData.error || 'Failed to generate PDF')
+        // Try to get error message, but handle case where response might be PDF
+        const contentType = res.headers.get('content-type')
+        if (contentType?.includes('application/json')) {
+          const errorData = await res.json()
+          throw new Error(errorData.error || 'Failed to generate PDF')
+        } else {
+          throw new Error(`Server error: ${res.status} ${res.statusText}`)
+        }
       }
 
+      // Get the PDF blob
       const blob = await res.blob()
       
-      // Check if blob is actually a PDF
-      if (blob.type !== 'application/pdf' && blob.size === 0) {
+      // Verify it's a PDF
+      if (!blob.type.includes('pdf') && blob.size === 0) {
         throw new Error('Invalid PDF response from server')
       }
 
+      // Create download link and trigger download
       const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'brochure.pdf'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'brochure.pdf'
+      link.style.display = 'none'
+      
+      // Append to body, click, then remove
+      document.body.appendChild(link)
+      link.click()
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      }, 100)
 
       toast({
         title: 'Success',

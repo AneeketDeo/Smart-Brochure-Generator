@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server'
 import chromium from '@sparticuz/chromium'
 import puppeteer from 'puppeteer-core'
 
+// Disable caching for this route
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const maxDuration = 30
+
 export async function POST(request: Request) {
   let browser: any = null
   try {
@@ -69,10 +74,16 @@ export async function POST(request: Request) {
     await browser.close()
     browser = null
 
+    // Return PDF as binary response with proper headers for download
     return new NextResponse(pdf, {
+      status: 200,
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': 'attachment; filename="brochure.pdf"',
+        'Content-Length': pdf.length.toString(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     })
   } catch (error: any) {
