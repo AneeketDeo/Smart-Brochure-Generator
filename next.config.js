@@ -13,6 +13,8 @@ const nextConfig = {
       },
     ],
   },
+  // Externalize puppeteer and chromium packages to prevent bundling issues in serverless
+  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
 }
 
 module.exports = nextConfig

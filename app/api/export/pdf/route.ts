@@ -2,11 +2,19 @@ import { createRouteSupabaseClient } from '@/lib/supabase/route-handler'
 import { NextResponse } from 'next/server'
 import chromium from '@sparticuz/chromium'
 import puppeteer from 'puppeteer-core'
+import * as os from 'os'
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const maxDuration = 30
+
+// Configure chromium to use /tmp for extraction in serverless environments
+if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  // Set extraction path to /tmp which is writable in serverless environments
+  const tmpDir = os.tmpdir()
+  process.env.CHROMIUM_PATH = tmpDir
+}
 
 export async function POST(request: Request) {
   let browser: any = null
@@ -31,15 +39,47 @@ export async function POST(request: Request) {
 
     // Configure Puppeteer for serverless environment
     const isProduction = process.env.NODE_ENV === 'production'
+    const isVercel = process.env.VERCEL === '1'
+    const isServerless = isProduction || isVercel
     
     const launchOptions: any = {
       headless: true,
-      args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: isServerless ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
     }
 
-    if (isProduction) {
-      launchOptions.executablePath = await chromium.executablePath()
-      launchOptions.defaultViewport = chromium.defaultViewport
+    if (isServerless) {
+      try {
+        // Configure chromium for serverless - it should extract to /tmp automatically
+        // The CHROMIUM_PATH environment variable is set at the top of the file
+        
+        // Get executable path with error handling
+        const executablePath = await chromium.executablePath()
+        if (executablePath) {
+          launchOptions.executablePath = executablePath
+        } else {
+          throw new Error('Failed to get chromium executable path')
+        }
+        launchOptions.defaultViewport = chromium.defaultViewport
+      } catch (chromiumError: any) {
+        console.error('Error getting chromium executable path:', chromiumError)
+        console.error('Error details:', {
+          message: chromiumError?.message,
+          stack: chromiumError?.stack,
+          env: {
+            NODE_ENV: process.env.NODE_ENV,
+            VERCEL: process.env.VERCEL,
+            CHROMIUM_PATH: process.env.CHROMIUM_PATH,
+            TMPDIR: process.env.TMPDIR || os.tmpdir(),
+          }
+        })
+        // Fallback: try to use system chromium or let puppeteer find it
+        // In serverless, we still need chromium, so throw a more helpful error
+        throw new Error(
+          'Chromium executable not available. This may be a deployment configuration issue. ' +
+          'Ensure @sparticuz/chromium is properly installed and compatible with your deployment platform. ' +
+          `Error: ${chromiumError?.message || 'Unknown error'}`
+        )
+      }
     }
     
     browser = await puppeteer.launch(launchOptions)
@@ -102,8 +142,14 @@ export async function POST(request: Request) {
     let errorMessage = error?.message || 'Failed to generate PDF'
     
     // Provide helpful error messages for common issues
-    if (errorMessage.includes('executable') || errorMessage.includes('browser')) {
-      errorMessage = 'Chromium not found. For local development, install Chromium or use: npm install puppeteer'
+    if (errorMessage.includes('executable') || errorMessage.includes('browser') || errorMessage.includes('does not exist')) {
+      if (errorMessage.includes('bin') || errorMessage.includes('does not exist')) {
+        errorMessage = 'Chromium binary extraction failed. This is a serverless deployment issue. ' +
+          'Please ensure @sparticuz/chromium is properly installed and compatible with your deployment platform. ' +
+          'For local development, use: npm install puppeteer (which includes Chromium).'
+      } else {
+        errorMessage = 'Chromium not found. For local development, install Chromium or use: npm install puppeteer'
+      }
     } else if (errorMessage.includes('timeout')) {
       errorMessage = 'PDF generation timed out. The brochure might be too large. Please try again.'
     }
