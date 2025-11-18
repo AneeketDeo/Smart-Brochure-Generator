@@ -1,4 +1,5 @@
 import { TemplateProps } from './template-renderer'
+import { normalizeUrl } from '@/lib/utils/urlHelper'
 
 export function renderMinimalTemplate({
   content,
@@ -72,7 +73,7 @@ export function renderMinimalTemplate({
       <div class="max-w-3xl mx-auto text-center text-gray-600">
         ${contactDetails.phone ? `<p>${contactDetails.phone}</p>` : ''}
         ${contactDetails.email ? `<p>${contactDetails.email}</p>` : ''}
-        ${contactDetails.website ? `<p><a href="${contactDetails.website}" class="underline">${contactDetails.website}</a></p>` : ''}
+        ${contactDetails.website ? `<p><a href="${normalizeUrl(contactDetails.website)}" target="_blank" rel="noopener noreferrer" class="underline">${contactDetails.website}</a></p>` : ''}
       </div>
     </section>
   </div>

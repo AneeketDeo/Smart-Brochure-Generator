@@ -1,4 +1,5 @@
 import { TemplateProps } from './template-renderer'
+import { normalizeUrl } from '@/lib/utils/urlHelper'
 
 export function renderBasicTemplate({
   content,
@@ -64,7 +65,7 @@ export function renderBasicTemplate({
         <div class="flex flex-wrap justify-center gap-4 mt-8">
           ${contactDetails.phone ? `<a href="tel:${contactDetails.phone}" class="px-6 py-3 bg-white text-gray-900 rounded-lg font-semibold hover:bg-gray-100">Call Us</a>` : ''}
           ${contactDetails.email ? `<a href="mailto:${contactDetails.email}" class="px-6 py-3 bg-white text-gray-900 rounded-lg font-semibold hover:bg-gray-100">Email Us</a>` : ''}
-          ${contactDetails.website ? `<a href="${contactDetails.website}" target="_blank" class="px-6 py-3 bg-white text-gray-900 rounded-lg font-semibold hover:bg-gray-100">Visit Website</a>` : ''}
+          ${contactDetails.website ? `<a href="${normalizeUrl(contactDetails.website)}" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-gray-900 rounded-lg font-semibold hover:bg-gray-100">Visit Website</a>` : ''}
         </div>
       </div>
     </section>
@@ -77,7 +78,7 @@ export function renderBasicTemplate({
           ${contactDetails.phone ? `<p><strong>Phone:</strong> ${contactDetails.phone}</p>` : ''}
           ${contactDetails.whatsapp ? `<p><strong>WhatsApp:</strong> ${contactDetails.whatsapp}</p>` : ''}
           ${contactDetails.email ? `<p><strong>Email:</strong> ${contactDetails.email}</p>` : ''}
-          ${contactDetails.website ? `<p><strong>Website:</strong> <a href="${contactDetails.website}" class="underline">${contactDetails.website}</a></p>` : ''}
+          ${contactDetails.website ? `<p><strong>Website:</strong> <a href="${normalizeUrl(contactDetails.website)}" target="_blank" rel="noopener noreferrer" class="underline">${contactDetails.website}</a></p>` : ''}
         </div>
         <p class="mt-8 text-gray-400">${content.contact}</p>
       </div>

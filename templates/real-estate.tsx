@@ -1,4 +1,5 @@
 import { TemplateProps } from './template-renderer'
+import { normalizeUrl } from '@/lib/utils/urlHelper'
 
 export function renderRealEstateTemplate({
   content,
@@ -85,7 +86,7 @@ export function renderRealEstateTemplate({
           </div>
           <div>
             ${contactDetails.email ? `<p class="text-lg mb-2"><strong>Email:</strong> ${contactDetails.email}</p>` : ''}
-            ${contactDetails.website ? `<p class="text-lg mb-2"><strong>Website:</strong> <a href="${contactDetails.website}" class="underline">${contactDetails.website}</a></p>` : ''}
+            ${contactDetails.website ? `<p class="text-lg mb-2"><strong>Website:</strong> <a href="${normalizeUrl(contactDetails.website)}" target="_blank" rel="noopener noreferrer" class="underline">${contactDetails.website}</a></p>` : ''}
           </div>
         </div>
         <p class="mt-8 text-gray-400">${content.contact}</p>

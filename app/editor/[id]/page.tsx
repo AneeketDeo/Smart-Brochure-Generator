@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEditorStore } from '@/store/editor-store'
 import { Button } from '@/components/ui/button'
@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { Save, Download, Upload, Palette } from 'lucide-react'
+import { Save, Download, Upload, Palette, Phone, Mail, Globe, MessageCircle } from 'lucide-react'
 import { renderTemplate } from '@/templates/template-renderer'
+import { generatePDFFromHTML, generatePDFFromIframe } from '@/lib/pdf/generatePDF'
+import { generateImageFromHTML, generateImageFromIframe, ImageFormat } from '@/lib/export/imageExport'
 
 export default function EditorPage() {
   const params = useParams()
@@ -20,6 +22,8 @@ export default function EditorPage() {
   const [saving, setSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [previewHtml, setPreviewHtml] = useState('')
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'png' | 'jpg' | 'svg'>('pdf')
+  const previewIframeRef = useRef<HTMLIFrameElement>(null)
 
   const {
     content,
@@ -116,7 +120,7 @@ export default function EditorPage() {
     }
   }
 
-  const handleExportPDF = async () => {
+  const handleExport = async () => {
     if (!previewHtml) {
       toast({
         title: 'Error',
@@ -127,58 +131,52 @@ export default function EditorPage() {
     }
 
     setExporting(true)
+    
     try {
-      const res = await fetch('/api/export/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: previewHtml }),
-      })
-
-      if (!res.ok) {
-        // Try to get error message, but handle case where response might be PDF
-        const contentType = res.headers.get('content-type')
-        if (contentType?.includes('application/json')) {
-          const errorData = await res.json()
-          throw new Error(errorData.error || 'Failed to generate PDF')
+      const filename = 'brochure'
+      
+      if (exportFormat === 'pdf') {
+        // PDF export
+        if (previewIframeRef.current) {
+          try {
+            await generatePDFFromIframe(previewIframeRef.current, 'brochure.pdf')
+          } catch (iframeError: any) {
+            console.warn('Iframe method failed, using HTML method:', iframeError)
+            await generatePDFFromHTML(previewHtml, 'brochure.pdf')
+          }
         } else {
-          throw new Error(`Server error: ${res.status} ${res.statusText}`)
+          await generatePDFFromHTML(previewHtml, 'brochure.pdf')
         }
+        
+        toast({
+          title: 'Success',
+          description: 'PDF downloaded successfully',
+        })
+      } else {
+        // Image export (PNG, JPG, SVG)
+        const imageFormat = exportFormat as ImageFormat
+        
+        if (previewIframeRef.current) {
+          try {
+            await generateImageFromIframe(previewIframeRef.current, imageFormat, filename)
+          } catch (iframeError: any) {
+            console.warn('Iframe method failed, using HTML method:', iframeError)
+            await generateImageFromHTML(previewHtml, imageFormat, filename)
+          }
+        } else {
+          await generateImageFromHTML(previewHtml, imageFormat, filename)
+        }
+        
+        toast({
+          title: 'Success',
+          description: `${exportFormat.toUpperCase()} downloaded successfully`,
+        })
       }
-
-      // Get the PDF blob
-      const blob = await res.blob()
-      
-      // Verify it's a PDF
-      if (!blob.type.includes('pdf') && blob.size === 0) {
-        throw new Error('Invalid PDF response from server')
-      }
-
-      // Create download link and trigger download
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'brochure.pdf'
-      link.style.display = 'none'
-      
-      // Append to body, click, then remove
-      document.body.appendChild(link)
-      link.click()
-      
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-      }, 100)
-
-      toast({
-        title: 'Success',
-        description: 'PDF downloaded successfully',
-      })
     } catch (error: any) {
-      console.error('PDF export error:', error)
+      console.error('Export error:', error)
       toast({
         title: 'Error',
-        description: error.message || 'Failed to generate PDF. Please try again.',
+        description: error.message || `Failed to generate ${exportFormat.toUpperCase()}. Please try again.`,
         variant: 'destructive',
       })
     } finally {
@@ -231,10 +229,27 @@ export default function EditorPage() {
               <Save className="mr-2 h-4 w-4" />
               {saving ? 'Saving...' : 'Save'}
             </Button>
-            <Button onClick={handleExportPDF} disabled={exporting || !previewHtml}>
-              <Download className="mr-2 h-4 w-4" />
-              {exporting ? 'Exporting...' : 'Export PDF'}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleExport} 
+                disabled={exporting || !previewHtml}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {exporting ? 'Exporting...' : 'Export'}
+              </Button>
+              <select
+                value={exportFormat}
+                onChange={(e) => setExportFormat(e.target.value as 'pdf' | 'png' | 'jpg' | 'svg')}
+                className="px-3 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={exporting || !previewHtml}
+                title="Select export format"
+              >
+                <option value="pdf">PDF</option>
+                <option value="png">PNG</option>
+                <option value="jpg">JPG</option>
+                <option value="svg">SVG</option>
+              </select>
+            </div>
             <Button variant="outline" onClick={() => router.push('/dashboard')}>
               Back to Dashboard
             </Button>
@@ -392,6 +407,74 @@ export default function EditorPage() {
                 />
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-phone" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone
+                  </Label>
+                  <Input
+                    id="contact-phone"
+                    type="tel"
+                    placeholder="+1 234 567 8900"
+                    value={contactDetails.phone || ''}
+                    onChange={(e) =>
+                      setContactDetails({ ...contactDetails, phone: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-whatsapp" className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
+                  </Label>
+                  <Input
+                    id="contact-whatsapp"
+                    type="tel"
+                    placeholder="+1 234 567 8900"
+                    value={contactDetails.whatsapp || ''}
+                    onChange={(e) =>
+                      setContactDetails({ ...contactDetails, whatsapp: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-email" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email
+                  </Label>
+                  <Input
+                    id="contact-email"
+                    type="email"
+                    placeholder="contact@example.com"
+                    value={contactDetails.email || ''}
+                    onChange={(e) =>
+                      setContactDetails({ ...contactDetails, email: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-website" className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Website
+                  </Label>
+                  <Input
+                    id="contact-website"
+                    type="url"
+                    placeholder="https://www.example.com"
+                    value={contactDetails.website || ''}
+                    onChange={(e) =>
+                      setContactDetails({ ...contactDetails, website: e.target.value })
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Preview Panel */}
@@ -406,6 +489,7 @@ export default function EditorPage() {
                   style={{ minHeight: '800px' }}
                 >
                   <iframe
+                    ref={previewIframeRef}
                     srcDoc={previewHtml}
                     className="w-full h-full"
                     style={{ minHeight: '800px', border: 'none' }}

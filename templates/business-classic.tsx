@@ -1,4 +1,5 @@
 import { TemplateProps } from './template-renderer'
+import { normalizeUrl } from '@/lib/utils/urlHelper'
 
 export function renderBusinessClassicTemplate({
   content,
@@ -77,7 +78,7 @@ export function renderBusinessClassicTemplate({
         <div class="flex flex-wrap justify-center gap-4">
           ${contactDetails.phone ? `<a href="tel:${contactDetails.phone}" class="px-6 py-3 bg-white text-gray-900 rounded font-semibold hover:bg-gray-100">Call Us</a>` : ''}
           ${contactDetails.email ? `<a href="mailto:${contactDetails.email}" class="px-6 py-3 bg-white text-gray-900 rounded font-semibold hover:bg-gray-100">Email Us</a>` : ''}
-          ${contactDetails.website ? `<a href="${contactDetails.website}" target="_blank" class="px-6 py-3 bg-white text-gray-900 rounded font-semibold hover:bg-gray-100">Visit Website</a>` : ''}
+          ${contactDetails.website ? `<a href="${normalizeUrl(contactDetails.website)}" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-gray-900 rounded font-semibold hover:bg-gray-100">Visit Website</a>` : ''}
         </div>
       </div>
     </section>
@@ -93,7 +94,7 @@ export function renderBusinessClassicTemplate({
           </div>
           <div>
             <h3 class="text-xl font-bold mb-4">Connect With Us</h3>
-            ${contactDetails.website ? `<p><a href="${contactDetails.website}" class="underline">${contactDetails.website}</a></p>` : ''}
+            ${contactDetails.website ? `<p><a href="${normalizeUrl(contactDetails.website)}" target="_blank" rel="noopener noreferrer" class="underline">${contactDetails.website}</a></p>` : ''}
             ${contactDetails.whatsapp ? `<p>WhatsApp: ${contactDetails.whatsapp}</p>` : ''}
           </div>
           <div>
