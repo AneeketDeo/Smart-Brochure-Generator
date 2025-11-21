@@ -127,9 +127,8 @@ async function exportAsRasterImage(
   filename: string
 ): Promise<void> {
   // Capture the element as canvas with high quality
-  const canvas = await html2canvas(element, {
-    // @ts-expect-error: html2canvas scale option missing in types
-
+  // Create options separately so TS won't validate individual properties
+  const canvasOptions: any = {
     scale: 2, // High quality
     useCORS: true,
     logging: false,
@@ -140,7 +139,13 @@ async function exportAsRasterImage(
     windowHeight: element.scrollHeight,
     allowTaint: false,
     removeContainer: false,
-  })
+  };
+
+  // Now use the options
+  const canvas = await html2canvas(element, canvasOptions);
+
+
+  
 
   // Convert to the requested format
   const mimeType = format === 'jpg' || format === 'jpeg' ? 'image/jpeg' : 'image/png'
@@ -172,9 +177,9 @@ async function exportAsRasterImage(
  */
 async function exportAsSVG(element: HTMLElement, filename: string): Promise<void> {
   // First, capture as canvas
-  const canvas = await html2canvas(element, {
-    // @ts-expect-error: html2canvas scale option missing in types
-    scale: 2,
+  // Create options separately so TS won't validate individual properties
+  const canvasOptions: any = {
+    scale: 2, // High quality
     useCORS: true,
     logging: false,
     backgroundColor: '#ffffff',
@@ -183,7 +188,12 @@ async function exportAsSVG(element: HTMLElement, filename: string): Promise<void
     windowWidth: element.scrollWidth,
     windowHeight: element.scrollHeight,
     allowTaint: false,
-  })
+    removeContainer: false,
+  };
+
+  // Now use the options
+  const canvas = await html2canvas(element, canvasOptions);
+
 
   // Convert canvas to SVG with embedded image
   const imgData = canvas.toDataURL('image/png')
