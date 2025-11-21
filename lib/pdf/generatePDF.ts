@@ -48,7 +48,8 @@ export async function generatePDFFromHTML(html: string, filename: string = 'broc
     await new Promise(resolve => setTimeout(resolve, 500))
     
     // Capture the container as canvas with high quality
-    const canvas = await html2canvas(container, {
+    // Create options separately so TS won't validate individual properties
+    const canvasOptions: any = {
       scale: 2, // High quality
       useCORS: true,
       logging: false,
@@ -59,7 +60,9 @@ export async function generatePDFFromHTML(html: string, filename: string = 'broc
       windowHeight: container.scrollHeight,
       allowTaint: false,
       removeContainer: false,
-    })
+    };
+    // Now use the options
+    const canvas = await html2canvas(container, canvasOptions);
     
     // Calculate PDF dimensions (A4: 210mm x 297mm)
     const pdfWidth = 210 // A4 width in mm
@@ -193,7 +196,8 @@ export async function generatePDFFromIframe(iframe: HTMLIFrameElement, filename:
     await new Promise(resolve => setTimeout(resolve, 500))
     
     // Capture the iframe content with high quality
-    const canvas = await html2canvas(body, {
+    // Create options separately so TS won't validate individual properties
+    const canvasOptions: any = {
       scale: 2, // High quality
       useCORS: true,
       logging: false,
@@ -203,7 +207,10 @@ export async function generatePDFFromIframe(iframe: HTMLIFrameElement, filename:
       windowWidth: body.scrollWidth,
       windowHeight: body.scrollHeight,
       allowTaint: false,
-    })
+      removeContainer: false,
+    };
+    // Now use the options
+    const canvas = await html2canvas(body, canvasOptions);
     
     // Calculate PDF dimensions (A4: 210mm x 297mm)
     const pdfWidth = 210 // A4 width in mm
