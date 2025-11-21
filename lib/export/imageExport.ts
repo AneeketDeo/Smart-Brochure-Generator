@@ -128,6 +128,8 @@ async function exportAsRasterImage(
 ): Promise<void> {
   // Capture the element as canvas with high quality
   const canvas = await html2canvas(element, {
+    // @ts-expect-error: html2canvas scale option missing in types
+
     scale: 2, // High quality
     useCORS: true,
     logging: false,
@@ -171,6 +173,7 @@ async function exportAsRasterImage(
 async function exportAsSVG(element: HTMLElement, filename: string): Promise<void> {
   // First, capture as canvas
   const canvas = await html2canvas(element, {
+    // @ts-expect-error: html2canvas scale option missing in types
     scale: 2,
     useCORS: true,
     logging: false,
